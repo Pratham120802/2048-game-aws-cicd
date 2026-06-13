@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Step 3: CodeBuild Project for 2048 Game CI/CD Pipeline'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'game2048'
+    Description: Project name used for resource naming
+  
+  Environment:
+    Type: String
+    Default: 'production'
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Environment name
+
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository URL (e.g., https://github.com/username/repo)
+    Default: ''
+
+  GitHubBranch:
+    Type: String
+    Description: GitHub branch to build from
+    Default: 'main'
+
+Resources:
+  # IAM Role for CodeBuild
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser'
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # CloudWatch Logs permissions
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-*'
+              
+              # S3 permissions for artifacts
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub '${ArtifactBucket.Arn}/*'
+              
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt ArtifactBucket.Arn
+              
+              # ECR permissions
+              - Effect: Allow
+                Action:
+                  - 'ecr:GetAuthorizationToken'
+                  - 'ecr:BatchCheckLayerAvailability'
+                  - 'ecr:GetDownloadUrlForLayer'
+                  - 'ecr:BatchGetImage'
+                  - 'ecr:PutImage'
+                  - 'ecr:InitiateLayerUpload'
+                  - 'ecr:UploadLayerPart'
+                  - 'ecr:CompleteLayerUpload'
+                Resource: '*'
+              
+              # VPC permissions (if needed)
+              - Effect: Allow
+                Action:
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DescribeSubnets'
+                  - 'ec2:DescribeSecurityGroups'
+                  - 'ec2:DescribeDhcpOptions'
+                  - 'ec2:DescribeVpcs'
+                  - 'ec2:CreateNetworkInterfacePermission'
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-codebuild-role'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # S3 Bucket for build artifacts
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-codebuild-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-artifacts'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudWatch Log Group for CodeBuild
+  CodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/codebuild/${ProjectName}-build-${Environment}'
+      RetentionInDays: 7
+
+  # CodeBuild Project
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${ProjectName}-build-${Environment}'
+      Description: Build Docker image for 2048 Game
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      
+      Artifacts:
+        Type: S3
+        Location: !Ref ArtifactBucket
+        Name: !Sub '${ProjectName}-artifacts'
+        Packaging: ZIP
+        EncryptionDisabled: false
+      
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Name: ECR_REPOSITORY_URI
+            Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ProjectName}-${Environment}'
+          - Name: IMAGE_TAG
+            Value: latest
+      
+      Source:
+        Type: GITHUB
+        Location: !Ref GitHubRepo
+        GitCloneDepth: 1
+        BuildSpec: buildspec.yml
+      
+      SourceVersion: !Sub 'refs/heads/${GitHubBranch}'
+      
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildLogGroup
+      
+      Cache:
+        Type: LOCAL
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+          - LOCAL_SOURCE_CACHE
+      
+      TimeoutInMinutes: 15
+      QueuedTimeoutInMinutes: 30
+      
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-build'
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  CodeBuildProjectName:
+    Description: CodeBuild Project Name
+    Value: !Ref CodeBuildProject
+    Export:
+      Name: !Sub '${ProjectName}-CodeBuildProjectName-${Environment}'
+
+  CodeBuildProjectArn:
+    Description: CodeBuild Project ARN
+    Value: !GetAtt CodeBuildProject.Arn
+    Export:
+      Name: !Sub '${ProjectName}-CodeBuildProjectArn-${Environment}'
+
+  CodeBuildRoleArn:
+    Description: CodeBuild Service Role ARN
+    Value: !GetAtt CodeBuildServiceRole.Arn
+    Export:
+      Name: !Sub '${ProjectName}-CodeBuildRoleArn-${Environment}'
+
+  ArtifactBucketName:
+    Description: S3 Bucket for Build Artifacts
+    Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub '${ProjectName}-ArtifactBucketName-${Environment}'
+
+  ArtifactBucketArn:
+    Description: S3 Bucket ARN
+    Value: !GetAtt ArtifactBucket.Arn
+    Export:
+      Name: !Sub '${ProjectName}-ArtifactBucketArn-${Environment}'
