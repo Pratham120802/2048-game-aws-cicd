@@ -2,10 +2,12 @@
 # PowerShell script for Windows
 
 # Configuration
-$ECR_REGISTRY = "825184644172.dkr.ecr.us-east-1.amazonaws.com"
-$ECR_REPOSITORY = "game2048-production"
+# Account ID is fetched dynamically so it is never hardcoded
 $AWS_REGION = "us-east-1"
+$ECR_REPOSITORY = "game2048-production"
 $IMAGE_TAG = "latest"
+$AWS_ACCOUNT_ID = (aws sts get-caller-identity --query Account --output text)
+$ECR_REGISTRY = "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "Building and Pushing 2048 Game to ECR" -ForegroundColor Cyan

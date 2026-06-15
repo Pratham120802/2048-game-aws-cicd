@@ -62,7 +62,7 @@ If you prefer to run commands manually:
 ### 1. Authenticate Docker with ECR
 
 ```cmd
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production
 ```
 
 ### 2. Build the Docker Image
@@ -76,13 +76,13 @@ cd ..
 ### 3. Tag the Image
 
 ```cmd
-docker tag game2048:latest 825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest
+docker tag game2048:latest {aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest
 ```
 
 ### 4. Push to ECR
 
 ```cmd
-docker push 825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest
+docker push {aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest
 ```
 
 ## ✅ Verify the Push
@@ -179,8 +179,8 @@ The script creates two tags:
 2. **build-YYYYMMDD-HHMMSS** - Timestamped for version tracking
 
 Example:
-- `825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest`
-- `825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production:build-20260612-143022`
+- `{aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production:latest`
+- `{aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production:build-20260612-143022`
 
 ## 🎯 What's Next?
 
@@ -201,3 +201,4 @@ After completing Step 2, you're ready for:
 **Step 2 Status**: ✅ Ready to deploy
 
 Once you run the build script successfully, the Docker image will be in ECR and ready to be deployed to ECS!
+

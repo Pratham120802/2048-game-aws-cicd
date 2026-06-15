@@ -5,10 +5,12 @@ REM This script builds the 2048 game Docker image and pushes it to Amazon ECR
 setlocal enabledelayedexpansion
 
 REM Configuration
-set ECR_REGISTRY=825184644172.dkr.ecr.us-east-1.amazonaws.com
-set ECR_REPOSITORY=game2048-production
+REM Account ID is fetched dynamically so it is never hardcoded
 set AWS_REGION=us-east-1
+set ECR_REPOSITORY=game2048-production
 set IMAGE_TAG=latest
+for /f "tokens=*" %%i in ('aws sts get-caller-identity --query Account --output text') do set AWS_ACCOUNT_ID=%%i
+set ECR_REGISTRY=%AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com
 
 echo ================================================
 echo Building and Pushing 2048 Game to ECR

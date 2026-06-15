@@ -6,9 +6,11 @@
 set -e
 
 # Configuration
-ECR_REPOSITORY_URI="825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production"
+# Account ID is fetched dynamically so it is never hardcoded
 AWS_REGION="us-east-1"
 IMAGE_TAG="latest"
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ECR_REPOSITORY_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/game2048-production"
 
 echo "================================================"
 echo "Building and Pushing 2048 Game to ECR"

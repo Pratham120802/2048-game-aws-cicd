@@ -232,8 +232,8 @@ CodeBuild automatically sets these variables:
 | Variable | Value | Purpose |
 |----------|-------|---------|
 | `AWS_DEFAULT_REGION` | `us-east-1` | AWS region |
-| `AWS_ACCOUNT_ID` | `825184644172` | Your account |
-| `ECR_REPOSITORY_URI` | `825184644172.dkr.ecr.us-east-1.amazonaws.com/game2048-production` | ECR repo |
+| `AWS_ACCOUNT_ID` | `{aws id}` | Your account |
+| `ECR_REPOSITORY_URI` | `{aws id}.dkr.ecr.us-east-1.amazonaws.com/game2048-production` | ECR repo |
 | `IMAGE_TAG` | `latest` | Docker tag |
 
 ## 💰 Costs
@@ -255,3 +255,4 @@ After Step 3, you're ready for:
 ---
 
 **Step 3 Status**: Ready to deploy once you have a GitHub repository! 🚀
+

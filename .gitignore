@@ -38,3 +38,6 @@ dist/
 
 # Node modules (if you add Node.js later)
 node_modules/
+
+# Personal project documentation (not for GitHub)
+PROJECT-DOCUMENTATION.md
