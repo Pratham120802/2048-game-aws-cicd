@@ -1,5 +1,7 @@
-# Use Nginx to serve the static 2048 game
-FROM nginx:alpine
+# Use Nginx to serve the static 2048 game.
+# Pulled from Amazon ECR Public Gallery instead of Docker Hub to avoid
+# Docker Hub's anonymous pull rate limits (429 Too Many Requests) in CodeBuild.
+FROM public.ecr.aws/docker/library/nginx:alpine
 
 # Remove default nginx website
 RUN rm -rf /usr/share/nginx/html/*
